@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>🎁 Mijn Cadeaukaarten</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #f7f5f2;
+      --surface: #ffffff;
+      --dark: #1a1a2e;
+      --muted: #6b7280;
+      --border: #e8e4de;
+      --green: #10b981;
+      --orange: #f59e0b;
+      --red: #ef4444;
+      --radius: 16px;
+      --shadow: 0 2px 12px rgba(0,0,0,0.07);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--dark);
+      min-height: 100vh;
+      padding-bottom: 80px;
+    }
+    h1, h2, .card-store { font-family: 'Syne', sans-serif; }
+
+    /* Layout */
+    .container { max-width: 480px; margin: 0 auto; padding: 0 16px; }
+
+    /* Header */
+    .hero-header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 28px 0 16px;
+    }
+    .app-title { font-size: 26px; font-weight: 800; letter-spacing: -0.5px; }
+    .app-subtitle { font-size: 13px; color: var(--muted); margin-top: 3px; }
+    .save-indicator { font-size: 12px; margin-left: 8px; }
+    .save-saving { color: #9ca3af; }
+    .save-saved { color: var(--green); }
+    .save-error { color: var(--red); }
+
+    /* Buttons */
+    .btn-primary {
+      background: var(--dark); color: #fff; border: none;
+      border-radius: 12px; padding: 10px 18px;
+      font-family: 'Syne', sans-serif; font-weight: 700; font-size: 14px;
+      cursor: pointer; white-space: nowrap; transition: opacity .15s;
+    }
+    .btn-primary:active { opacity: 0.8; }
+    .btn-primary.full { width: 100%; padding: 14px; font-size: 15px; border-radius: 14px; margin-top: 8px; }
+    .btn-primary:disabled { opacity: 0.4; cursor: default; }
+    .btn-back {
+      background: none; border: 1.5px solid var(--border); border-radius: 10px;
+      padding: 7px 14px; font-size: 14px; cursor: pointer; color: #374151; font-weight: 600;
+    }
+    .btn-edit {
+      background: #f3f4f6; border: none; border-radius: 10px;
+      padding: 7px 14px; font-size: 13px; cursor: pointer; font-weight: 600;
+    }
+    .btn-delete {
+      background: #fee2e2; border: none; border-radius: 10px;
+      padding: 7px 14px; font-size: 14px; cursor: pointer;
+    }
+    .btn-icon {
+      background: #f3f4f6; border: none; border-radius: 8px;
+      padding: 5px 9px; cursor: pointer; font-size: 14px; transition: background .15s;
+    }
+    .btn-icon.copied { background: #d1fae5; }
+    .btn-balance-check {
+      display: block; background: var(--dark); color: #fff; border-radius: 14px;
+      padding: 14px; text-align: center; font-weight: 700; font-size: 15px;
+      text-decoration: none; margin-bottom: 14px;
+      font-family: 'Syne', sans-serif;
+    }
+
+    /* Stats */
+    .stats-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 18px; }
+    .stat-box { background: var(--surface); border-radius: 14px; padding: 12px 10px; text-align: center; box-shadow: var(--shadow); }
+    .stat-value { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 800; }
+    .stat-label { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+    /* Toolbar */
+    .toolbar { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+    .search-input, .filter-select {
+      border: 1.5px solid var(--border); border-radius: 10px;
+      padding: 8px 12px; font-size: 14px; outline: none;
+      background: var(--surface); font-family: 'DM Sans', sans-serif; color: var(--dark);
+    }
+    .search-input { flex: 1 1 140px; }
+    .filter-select { cursor: pointer; }
+
+    /* Card tiles */
+    .cards-list { display: flex; flex-direction: column; gap: 10px; }
+    .card-tile {
+      background: var(--surface); border-radius: var(--radius); overflow: hidden;
+      box-shadow: var(--shadow); cursor: pointer; display: flex;
+      transition: transform .1s, box-shadow .1s;
+    }
+    .card-tile:active { transform: scale(0.98); }
+    .card-tile.expired { opacity: 0.55; }
+    .card-tile-bar { width: 5px; flex-shrink: 0; }
+    .card-tile-content { padding: 12px 14px; flex: 1; min-width: 0; }
+    .card-tile-top { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+    .card-tile-emoji { font-size: 22px; flex-shrink: 0; }
+    .card-tile-store { font-size: 15px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .card-tile-nick { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .card-tile-balance { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 800; margin-bottom: 2px; }
+    .card-tile-code { font-size: 12px; color: var(--muted); font-family: monospace; }
+
+    /* Badges */
+    .badge {
+      border-radius: 20px; padding: 2px 8px; font-size: 11px;
+      font-weight: 700; white-space: nowrap; flex-shrink: 0;
+    }
+    .badge-expired { background: #fee2e2; color: #dc2626; }
+    .badge-warning { background: #fef3c7; color: #d97706; }
+    .badge-soon { background: #dbeafe; color: #2563eb; }
+    .badge-ok { background: #d1fae5; color: #059669; }
+
+    /* Empty state */
+    .empty-state { text-align: center; padding: 60px 20px; }
+    .empty-emoji { font-size: 60px; }
+    .empty-title { font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 700; margin-top: 16px; }
+    .empty-text { font-size: 14px; color: var(--muted); margin-top: 8px; }
+
+    /* Page header (back nav) */
+    .page-header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 20px 0 16px;
+    }
+    .page-title { font-size: 18px; font-weight: 700; }
+
+    /* Card visual */
+    .card-visual {
+      border-radius: 20px; padding: 22px 24px; color: #fff;
+      margin-bottom: 16px; position: relative; overflow: hidden; min-height: 140px;
+    }
+    .card-visual-top { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+    .card-visual-emoji { font-size: 32px; }
+    .card-store { font-size: 20px; font-weight: 800; }
+    .card-nickname { font-size: 13px; opacity: 0.8; }
+    .card-balance { font-family: 'Syne', sans-serif; font-size: 32px; font-weight: 900; letter-spacing: -1px; margin-bottom: 8px; }
+    .card-code-display { font-family: monospace; font-size: 15px; letter-spacing: 2px; opacity: 0.85; }
+    .expired-overlay {
+      position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, -50%) rotate(-20deg);
+      font-family: 'Syne', sans-serif; font-size: 36px; font-weight: 900;
+      color: rgba(255,255,255,0.35); border: 4px solid rgba(255,255,255,0.35);
+      padding: 6px 20px; border-radius: 8px; letter-spacing: 4px; pointer-events: none;
+    }
+
+    /* Detail section */
+    .detail-section { background: var(--surface); border-radius: var(--radius); padding: 4px 0; margin-bottom: 14px; box-shadow: var(--shadow); }
+    .detail-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 12px 16px; border-bottom: 1px solid #f3f4f6; gap: 8px;
+    }
+    .detail-row:last-child { border-bottom: none; }
+    .detail-row.column { flex-direction: column; align-items: flex-start; gap: 4px; }
+    .detail-label { font-size: 13px; color: var(--muted); font-weight: 600; flex-shrink: 0; }
+    .detail-value { font-size: 14px; font-weight: 600; text-align: right; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+    .detail-actions { display: flex; align-items: center; gap: 6px; }
+    .code-text {
+      font-family: monospace; font-size: 13px; background: #f3f4f6;
+      padding: 3px 8px; border-radius: 6px; letter-spacing: 1px;
+    }
+
+    /* Barcode */
+    .barcode-box { background: var(--surface); border-radius: var(--radius); padding: 18px 16px; text-align: center; box-shadow: var(--shadow); }
+    .barcode-title { font-weight: 700; font-size: 14px; margin-bottom: 12px; }
+    .barcode-stripes { display: flex; justify-content: center; align-items: stretch; height: 56px; gap: 1.5px; margin-bottom: 8px; }
+    .bar-stripe { background: var(--dark); border-radius: 1px; height: 100%; }
+    .barcode-code { font-family: monospace; font-size: 13px; color: #374151; letter-spacing: 2px; margin-top: 4px; }
+    .barcode-hint { font-size: 11px; color: #9ca3af; margin-top: 4px; }
+
+    /* Form */
+    .form-card { background: var(--surface); border-radius: 18px; padding: 20px; box-shadow: var(--shadow); }
+    .form-label { display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 6px; }
+    .form-label.mt { margin-top: 16px; }
+    .form-input, .form-select, .form-textarea {
+      width: 100%; border: 1.5px solid var(--border); border-radius: 10px;
+      padding: 10px 12px; font-size: 14px; outline: none;
+      background: #fafafa; font-family: 'DM Sans', sans-serif; color: var(--dark);
+    }
+    .form-textarea { min-height: 72px; resize: vertical; }
+    .form-select { cursor: pointer; }
+    .custom-store-box { background: #f9fafb; border-radius: 12px; padding: 14px; margin-top: 10px; }
+    .custom-store-row { display: flex; gap: 12px; margin-top: 12px; }
+    .custom-store-row > div { flex: 1; }
+    input[type=color].form-input { padding: 4px; height: 44px; cursor: pointer; }
+
+    /* Screen management */
+    .screen { display: none; }
+    .screen.active { display: block; }
+
+    /* No results */
+    .no-results { text-align: center; color: #9ca3af; padding: 40px 0; }
+
+    /* Loading */
+    .loading-screen {
+      display: flex; align-items: center; justify-content: center;
+      min-height: 100vh; text-align: center;
+    }
+    .loading-emoji { font-size: 48px; margin-bottom: 16px; }
+    .loading-text { font-size: 16px; color: var(--muted); font-weight: 600; }
+  </style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div id="screen-loading" class="loading-screen">
+  <div>
+    <div class="loading-emoji">🎁</div>
+    <div class="loading-text">Kaarten laden...</div>
+  </div>
+</div>
+
+<!-- OVERVIEW -->
+<div id="screen-overview" class="screen">
+  <div class="container">
+    <div class="hero-header">
+      <div>
+        <h1 class="app-title">🎁 Mijn Kaarten</h1>
+        <p class="app-subtitle">
+          <span id="card-count">0 kaarten</span>
+          <span id="save-indicator" class="save-indicator"></span>
+        </p>
+      </div>
+      <button id="btn-add-header" class="btn-primary" onclick="showAddScreen()" style="display:none">+ Toevoegen</button>
+    </div>
+
+    <div id="stats-row" class="stats-row" style="display:none">
+      <div class="stat-box">
+        <div id="stat-total" class="stat-value">€0</div>
+        <div class="stat-label">Totaal saldo</div>
+      </div>
+      <div class="stat-box">
+        <div id="stat-expiring" class="stat-value" style="color:var(--green)">0</div>
+        <div class="stat-label">Verloopt binnenkort</div>
+      </div>
+      <div class="stat-box">
+        <div id="stat-expired" class="stat-value" style="color:var(--green)">0</div>
+        <div class="stat-label">Verlopen</div>
+      </div>
+    </div>
+
+    <div id="toolbar" class="toolbar" style="display:none">
+      <input class="search-input" id="search-input" placeholder="🔍 Zoeken..." oninput="renderCards()" />
+      <select class="filter-select" id="filter-store" onchange="renderCards()">
+        <option value="all">Alle winkels</option>
+      </select>
+      <select class="filter-select" id="sort-by" onchange="renderCards()">
+        <option value="name">Naam</option>
+        <option value="expiry">Vervaldatum</option>
+        <option value="balance">Saldo</option>
+      </select>
+    </div>
+
+    <div id="cards-list" class="cards-list"></div>
+    <div id="empty-state" class="empty-state" style="display:none">
+      <div class="empty-emoji">🎁</div>
+      <div class="empty-title">Nog geen kaarten</div>
+      <div class="empty-text">Voeg je eerste cadeaukaart toe!</div>
+      <button class="btn-primary full" onclick="showAddScreen()" style="max-width:280px;margin:20px auto 0;display:block">+ Eerste kaart toevoegen</button>
+    </div>
+    <div id="no-results" class="no-results" style="display:none">Geen kaarten gevonden</div>
+  </div>
+</div>
+
+<!-- ADD / EDIT -->
+<div id="screen-add" class="screen">
+  <div class="container">
+    <div class="page-header">
+      <button class="btn-back" onclick="backFromAdd()">← Terug</button>
+      <h2 class="page-title" id="add-title">Nieuwe kaart</h2>
+    </div>
+    <div class="form-card">
+      <label class="form-label">Winkel *</label>
+      <select class="form-select" id="f-store" onchange="onStoreChange()">
+        <option value="">Kies een winkel...</option>
+      </select>
+
+      <div id="custom-store-box" class="custom-store-box" style="display:none">
+        <label class="form-label">Naam winkel *</label>
+        <input class="form-input" id="f-custom-store" placeholder="Naam van de winkel" />
+        <div class="custom-store-row">
+          <div>
+            <label class="form-label">Emoji</label>
+            <input class="form-input" id="f-custom-emoji" placeholder="💳" maxlength="2" value="💳" />
+          </div>
+          <div>
+            <label class="form-label">Kleur</label>
+            <input type="color" class="form-input" id="f-custom-color" value="#6b7280" />
+          </div>
+        </div>
+      </div>
+
+      <label class="form-label mt">Bijnaam (optioneel)</label>
+      <input class="form-input" id="f-nickname" placeholder="bv. Verjaardag 2024" />
+
+      <label class="form-label mt">Kaartnummer / Code *</label>
+      <input class="form-input" id="f-code" placeholder="bv. 1234-5678-9012-3456" oninput="checkFormValid()" />
+
+      <label class="form-label mt">Pincode (optioneel)</label>
+      <input class="form-input" id="f-pin" placeholder="bv. 1234" />
+
+      <label class="form-label mt">Saldo (€)</label>
+      <input class="form-input" type="number" step="0.01" min="0" id="f-balance" placeholder="bv. 25.00" />
+
+      <label class="form-label mt">Vervaldatum</label>
+      <input class="form-input" type="date" id="f-expiry" />
+
+      <label class="form-label mt">Saldocheck URL (optioneel)</label>
+      <input class="form-input" id="f-balance-url" placeholder="https://..." />
+
+      <label class="form-label mt">Notities</label>
+      <textarea class="form-textarea form-input" id="f-notes" placeholder="Extra informatie..."></textarea>
+
+      <button class="btn-primary full" id="btn-save" onclick="saveCard()" disabled>Kaart toevoegen</button>
+    </div>
+  </div>
+</div>
+
+<!-- DETAIL -->
+<div id="screen-detail" class="screen">
+  <div class="container">
+    <div class="page-header">
+      <button class="btn-back" onclick="showScreen('overview')">← Terug</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn-edit" onclick="startEdit()">✏️ Bewerk</button>
+        <button class="btn-delete" onclick="deleteCurrentCard()">🗑️</button>
+      </div>
+    </div>
+
+    <div id="detail-visual" class="card-visual"></div>
+    <div id="detail-section" class="detail-section"></div>
+    <a id="detail-balance-link" href="#" target="_blank" rel="noopener noreferrer" class="btn-balance-check" style="display:none">🔍 Saldo controleren</a>
+    <div id="detail-barcode" class="barcode-box"></div>
+  </div>
+</div>
+
+<script>
+// ─── STORES ────────────────────────────────────────────────────────────────
+const STORES = [
+  { name:"Bol.com",       color:"#0063d3", emoji:"📦", url:"https://www.bol.com/nl/nl/cadeaukaart/" },
+  { name:"H&M",           color:"#e50010", emoji:"👗", url:"https://www2.hm.com/nl_nl/klantenservice/giftcard.html" },
+  { name:"Zalando",       color:"#ff6900", emoji:"👟", url:"https://www.zalando.nl/giftcard/" },
+  { name:"IKEA",          color:"#003087", emoji:"🛋️", url:"https://www.ikea.com/nl/nl/customer-service/giftcard/" },
+  { name:"MediaMarkt",    color:"#cc0000", emoji:"🖥️", url:"https://www.mediamarkt.nl/nl/service/giftcard" },
+  { name:"Amazon",        color:"#ff9900", emoji:"📫", url:"https://www.amazon.nl/giftcards/balance" },
+  { name:"Netflix",       color:"#e50914", emoji:"🎬", url:"https://www.netflix.com/redeem" },
+  { name:"Spotify",       color:"#1db954", emoji:"🎵", url:"https://www.spotify.com/nl/redeem/" },
+  { name:"Steam",         color:"#1b2838", emoji:"🎮", url:"https://store.steampowered.com/account/redeemwalletcode" },
+  { name:"VVV Cadeaukaart",color:"#c8973a",emoji:"🎁", url:"https://vvvcadeaukaart.nl/saldo-check/" },
+  { name:"Decathlon",     color:"#0082c3", emoji:"🏃", url:"https://www.decathlon.nl/nl/cadeaukaart.html" },
+  { name:"Action",        color:"#e30613", emoji:"🛒", url:null },
+  { name:"Hema",          color:"#e3001e", emoji:"🏠", url:"https://www.hema.nl/klantenservice/cadeaukaart/" },
+  { name:"Andere",        color:"#6b7280", emoji:"💳", url:null },
+];
+
+// ─── STATE ─────────────────────────────────────────────────────────────────
+let cards = [];
+let currentCardId = null;
+let editMode = false;
+let showCodes = {};
+let showPins = {};
+
+// ─── STORAGE ───────────────────────────────────────────────────────────────
+function loadCards() {
+  try {
+    const raw = localStorage.getItem('cadeaukaarten_v1');
+    cards = raw ? JSON.parse(raw) : [];
+  } catch { cards = []; }
+}
+
+function saveCards() {
+  setSaveStatus('saving');
+  try {
+    localStorage.setItem('cadeaukaarten_v1', JSON.stringify(cards));
+    setSaveStatus('saved');
+    setTimeout(() => setSaveStatus(null), 2000);
+  } catch { setSaveStatus('error'); }
+}
+
+function setSaveStatus(status) {
+  const el = document.getElementById('save-indicator');
+  if (!el) return;
+  if (!status) { el.textContent = ''; return; }
+  const map = { saving: ['↑ opslaan...','save-saving'], saved: ['✓ opgeslagen','save-saved'], error: ['⚠ opslaan mislukt','save-error'] };
+  el.className = 'save-indicator ' + map[status][1];
+  el.textContent = map[status][0];
+}
+
+// ─── SCREENS ───────────────────────────────────────────────────────────────
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-loading').style.display = 'none';
+  const el = document.getElementById('screen-' + name);
+  if (el) el.classList.add('active');
+  if (name === 'overview') renderOverview();
+}
+
+// ─── HELPERS ───────────────────────────────────────────────────────────────
+function daysUntil(dateStr) {
+  if (!dateStr) return null;
+  const today = new Date(); today.setHours(0,0,0,0);
+  return Math.ceil((new Date(dateStr) - today) / 86400000);
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return '';
+  return new Date(dateStr).toLocaleDateString('nl-NL', { day:'2-digit', month:'short', year:'numeric' });
+}
+
+function expiryBadge(dateStr) {
+  if (!dateStr) return '';
+  const d = daysUntil(dateStr);
+  if (d < 0)   return `<span class="badge badge-expired">Verlopen</span>`;
+  if (d <= 30)  return `<span class="badge badge-warning">⚠ ${d}d</span>`;
+  if (d <= 90)  return `<span class="badge badge-soon">${d}d</span>`;
+  return `<span class="badge badge-ok">${formatDate(dateStr)}</span>`;
+}
+
+function maskCode(code) {
+  return code.substring(0,4) + '••••••••';
+}
+
+function generateBarcode() {
+  const widths = [2,1,3,1,2,1,2,3,1,2];
+  let html = '';
+  for (let i = 0; i < 42; i++) {
+    const w = widths[i % 10];
+    html += `<div class="bar-stripe" style="width:${w}px"></div>`;
+  }
+  return html;
+}
+
+// ─── OVERVIEW ──────────────────────────────────────────────────────────────
+function renderOverview() {
+  const count = cards.length;
+  document.getElementById('card-count').textContent = `${count} cadeaukaart${count !== 1 ? 'en' : ''}`;
+  document.getElementById('btn-add-header').style.display = count > 0 ? 'block' : 'none';
+  document.getElementById('stats-row').style.display = count > 0 ? 'grid' : 'none';
+  document.getElementById('toolbar').style.display = count > 0 ? 'flex' : 'none';
+
+  if (count > 0) {
+    const total = cards.reduce((s,c) => s + (parseFloat(c.balance)||0), 0);
+    const expiringSoon = cards.filter(c => { const d=daysUntil(c.expiryDate); return d!==null && d>=0 && d<=30; }).length;
+    const expired = cards.filter(c => { const d=daysUntil(c.expiryDate); return d!==null && d<0; }).length;
+    document.getElementById('stat-total').textContent = `€${total.toFixed(2)}`;
+    const es = document.getElementById('stat-expiring');
+    es.textContent = expiringSoon;
+    es.style.color = expiringSoon > 0 ? 'var(--orange)' : 'var(--green)';
+    const ex = document.getElementById('stat-expired');
+    ex.textContent = expired;
+    ex.style.color = expired > 0 ? 'var(--red)' : 'var(--green)';
+
+    // Rebuild filter options
+    const sel = document.getElementById('filter-store');
+    const cur = sel.value;
+    sel.innerHTML = '<option value="all">Alle winkels</option>';
+    [...new Set(cards.map(c => c.store))].forEach(s => {
+      sel.innerHTML += `<option value="${s}"${s===cur?' selected':''}>${s}</option>`;
+    });
+  }
+
+  renderCards();
+}
+
+function renderCards() {
+  const search = (document.getElementById('search-input')?.value || '').toLowerCase();
+  const filterStore = document.getElementById('filter-store')?.value || 'all';
+  const sortBy = document.getElementById('sort-by')?.value || 'name';
+
+  let filtered = cards
+    .filter(c => filterStore === 'all' || c.store === filterStore)
+    .filter(c => !search || c.store.toLowerCase().includes(search) || (c.nickname||'').toLowerCase().includes(search));
+
+  filtered.sort((a,b) => {
+    if (sortBy === 'name') return a.store.localeCompare(b.store);
+    if (sortBy === 'expiry') {
+      if (!a.expiryDate) return 1; if (!b.expiryDate) return -1;
+      return new Date(a.expiryDate) - new Date(b.expiryDate);
+    }
+    if (sortBy === 'balance') return (parseFloat(b.balance)||0) - (parseFloat(a.balance)||0);
+    return 0;
+  });
+
+  const list = document.getElementById('cards-list');
+  const empty = document.getElementById('empty-state');
+  const noResults = document.getElementById('no-results');
+
+  if (cards.length === 0) {
+    list.innerHTML = ''; empty.style.display = 'block'; noResults.style.display = 'none'; return;
+  }
+  empty.style.display = 'none';
+  if (filtered.length === 0) { list.innerHTML = ''; noResults.style.display = 'block'; return; }
+  noResults.style.display = 'none';
+
+  list.innerHTML = filtered.map(card => {
+    const isExpired = (d => d !== null && d < 0)(daysUntil(card.expiryDate));
+    return `
+    <div class="card-tile${isExpired?' expired':''}" onclick="showDetail('${card.id}')">
+      <div class="card-tile-bar" style="background:${card.storeColor}"></div>
+      <div class="card-tile-content">
+        <div class="card-tile-top">
+          <span class="card-tile-emoji">${card.storeEmoji}</span>
+          <div style="flex:1;min-width:0">
+            <div class="card-tile-store">${card.store}</div>
+            ${card.nickname ? `<div class="card-tile-nick">${card.nickname}</div>` : ''}
+          </div>
+          ${card.expiryDate ? expiryBadge(card.expiryDate) : ''}
+        </div>
+        ${card.balance ? `<div class="card-tile-balance">€ ${parseFloat(card.balance).toFixed(2)}</div>` : ''}
+        <div class="card-tile-code">${maskCode(card.code)}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ─── DETAIL ────────────────────────────────────────────────────────────────
+function showDetail(id) {
+  currentCardId = id;
+  const card = cards.find(c => c.id === id);
+  if (!card) return;
+  const isExpired = (d => d !== null && d < 0)(daysUntil(card.expiryDate));
+
+  // Visual
+  document.getElementById('detail-visual').style.cssText = `background: linear-gradient(135deg, ${card.storeColor}dd, ${card.storeColor}88); opacity: ${isExpired ? 0.5 : 1}`;
+  document.getElementById('detail-visual').innerHTML = `
+    <div class="card-visual-top">
+      <span class="card-visual-emoji">${card.storeEmoji}</span>
+      <div>
+        <div class="card-store">${card.store}</div>
+        ${card.nickname ? `<div class="card-nickname">${card.nickname}</div>` : ''}
+      </div>
+    </div>
+    ${card.balance ? `<div class="card-balance">€ ${parseFloat(card.balance).toFixed(2)}</div>` : ''}
+    <div class="card-code-display">${showCodes[id] ? card.code : card.code.replace(/./g,'•').replace(/•{4}/g,'••••')}</div>
+    ${isExpired ? '<div class="expired-overlay">VERLOPEN</div>' : ''}
+  `;
+
+  // Detail rows
+  let rows = `
+    <div class="detail-row">
+      <span class="detail-label">🔢 Kaartnummer</span>
+      <div class="detail-actions">
+        <code class="code-text">${showCodes[id] ? card.code : '••••••••••••'}</code>
+        <button class="btn-icon" onclick="toggleCode('${id}')">${showCodes[id]?'🙈':'👁️'}</button>
+        <button class="btn-icon" id="copy-code-${id}" onclick="copyText('${card.code}','copy-code-${id}')">📋</button>
+      </div>
+    </div>`;
+  if (card.pin) rows += `
+    <div class="detail-row">
+      <span class="detail-label">🔐 Pincode</span>
+      <div class="detail-actions">
+        <code class="code-text">${showPins[id] ? card.pin : '••••'}</code>
+        <button class="btn-icon" onclick="togglePin('${id}')">${showPins[id]?'🙈':'👁️'}</button>
+        <button class="btn-icon" id="copy-pin-${id}" onclick="copyText('${card.pin}','copy-pin-${id}')">📋</button>
+      </div>
+    </div>`;
+  if (card.balance) rows += `
+    <div class="detail-row">
+      <span class="detail-label">💰 Saldo</span>
+      <span class="detail-value">€ ${parseFloat(card.balance).toFixed(2)}</span>
+    </div>`;
+  if (card.expiryDate) rows += `
+    <div class="detail-row">
+      <span class="detail-label">📅 Vervaldatum</span>
+      <span class="detail-value">${formatDate(card.expiryDate)} ${expiryBadge(card.expiryDate)}</span>
+    </div>`;
+  if (card.notes) rows += `
+    <div class="detail-row column">
+      <span class="detail-label">📝 Notities</span>
+      <span style="font-size:14px;color:#4b5563">${card.notes}</span>
+    </div>`;
+  document.getElementById('detail-section').innerHTML = rows;
+
+  // Balance link
+  const link = document.getElementById('detail-balance-link');
+  if (card.balanceUrl) {
+    link.href = card.balanceUrl;
+    link.textContent = `🔍 Saldo controleren bij ${card.store}`;
+    link.style.display = 'block';
+  } else {
+    link.style.display = 'none';
+  }
+
+  // Barcode
+  document.getElementById('detail-barcode').innerHTML = `
+    <div class="barcode-title">📱 Scan in de winkel</div>
+    <div class="barcode-stripes">${generateBarcode()}</div>
+    <div class="barcode-code">${card.code}</div>
+    <div class="barcode-hint">Toon dit scherm aan de kassa</div>
+  `;
+
+  showScreen('detail');
+}
+
+function toggleCode(id) {
+  showCodes[id] = !showCodes[id];
+  showDetail(id);
+}
+function togglePin(id) {
+  showPins[id] = !showPins[id];
+  showDetail(id);
+}
+function copyText(text, btnId) {
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById(btnId);
+    if (btn) { btn.textContent = '✅'; btn.classList.add('copied'); }
+    setTimeout(() => {
+      const b = document.getElementById(btnId);
+      if (b) { b.textContent = '📋'; b.classList.remove('copied'); }
+    }, 1500);
+  });
+}
+
+// ─── ADD / EDIT ────────────────────────────────────────────────────────────
+function showAddScreen(prefill) {
+  editMode = false;
+  document.getElementById('add-title').textContent = 'Nieuwe kaart';
+  document.getElementById('btn-save').textContent = 'Kaart toevoegen';
+  clearForm();
+  if (prefill) fillForm(prefill);
+  showScreen('add');
+}
+
+function startEdit() {
+  const card = cards.find(c => c.id === currentCardId);
+  if (!card) return;
+  editMode = true;
+  document.getElementById('add-title').textContent = 'Kaart bewerken';
+  document.getElementById('btn-save').textContent = 'Opslaan';
+  fillForm(card);
+  showScreen('add');
+}
+
+function fillForm(card) {
+  const knownStore = STORES.find(s => s.name === card.store);
+  document.getElementById('f-store').value = knownStore ? card.store : 'Andere';
+  document.getElementById('f-custom-store').value = knownStore ? '' : (card.store||'');
+  document.getElementById('f-custom-color').value = card.storeColor || '#6b7280';
+  document.getElementById('f-custom-emoji').value = card.storeEmoji || '💳';
+  document.getElementById('f-nickname').value = card.nickname||'';
+  document.getElementById('f-code').value = card.code||'';
+  document.getElementById('f-pin').value = card.pin||'';
+  document.getElementById('f-balance').value = card.balance||'';
+  document.getElementById('f-expiry').value = card.expiryDate||'';
+  document.getElementById('f-balance-url').value = card.balanceUrl||'';
+  document.getElementById('f-notes').value = card.notes||'';
+  onStoreChange();
+  checkFormValid();
+}
+
+function clearForm() {
+  ['f-store','f-custom-store','f-nickname','f-code','f-pin','f-balance','f-expiry','f-balance-url','f-notes'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('f-custom-color').value = '#6b7280';
+  document.getElementById('f-custom-emoji').value = '💳';
+  onStoreChange();
+  checkFormValid();
+}
+
+function onStoreChange() {
+  const val = document.getElementById('f-store').value;
+  const isOther = val === 'Andere';
+  document.getElementById('custom-store-box').style.display = isOther ? 'block' : 'none';
+  if (val && val !== 'Andere') {
+    const s = STORES.find(x => x.name === val);
+    if (s) document.getElementById('f-balance-url').value = s.url || '';
+  }
+  checkFormValid();
+}
+
+function checkFormValid() {
+  const store = document.getElementById('f-store').value;
+  const code = document.getElementById('f-code').value.trim();
+  document.getElementById('btn-save').disabled = !store || !code;
+}
+
+function backFromAdd() {
+  if (editMode && currentCardId) { showDetail(currentCardId); }
+  else { showScreen('overview'); }
+}
+
+function saveCard() {
+  const storeVal = document.getElementById('f-store').value;
+  const knownStore = STORES.find(s => s.name === storeVal);
+  const storeInfo = storeVal === 'Andere'
+    ? { name: document.getElementById('f-custom-store').value || 'Eigen kaart', color: document.getElementById('f-custom-color').value, emoji: document.getElementById('f-custom-emoji').value, url: document.getElementById('f-balance-url').value }
+    : (knownStore || { name: storeVal, color: '#6b7280', emoji: '💳', url: '' });
+
+  const card = {
+    id: editMode ? currentCardId : Date.now().toString(),
+    store: storeInfo.name,
+    storeColor: storeInfo.color,
+    storeEmoji: storeInfo.emoji,
+    nickname: document.getElementById('f-nickname').value,
+    code: document.getElementById('f-code').value.trim(),
+    pin: document.getElementById('f-pin').value,
+    balance: document.getElementById('f-balance').value,
+    expiryDate: document.getElementById('f-expiry').value,
+    balanceUrl: document.getElementById('f-balance-url').value || storeInfo.url || '',
+    notes: document.getElementById('f-notes').value,
+    createdAt: editMode ? (cards.find(c=>c.id===currentCardId)||{}).createdAt : new Date().toISOString(),
+  };
+
+  if (editMode) {
+    cards = cards.map(c => c.id === card.id ? card : c);
+    saveCards();
+    showDetail(card.id);
+  } else {
+    cards.push(card);
+    saveCards();
+    showScreen('overview');
+  }
+}
+
+function deleteCurrentCard() {
+  if (!confirm('Weet je zeker dat je deze kaart wilt verwijderen?')) return;
+  cards = cards.filter(c => c.id !== currentCardId);
+  saveCards();
+  showScreen('overview');
+}
+
+// ─── INIT ──────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  // Populate store dropdown
+  const sel = document.getElementById('f-store');
+  STORES.forEach(s => {
+    sel.innerHTML += `<option value="${s.name}">${s.emoji} ${s.name}</option>`;
+  });
+
+  loadCards();
+  document.getElementById('screen-loading').style.display = 'none';
+  showScreen('overview');
+});
+</script>
+</body>
+</html>
