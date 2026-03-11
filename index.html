@@ -232,6 +232,10 @@
       <label class="form-label mt">Saldo (€)</label>
       <input class="form-input" type="number" step="0.01" min="0" id="f-balance" placeholder="bv. 25.00" />
       <label class="form-label mt">Vervaldatum</label>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+        <input type="checkbox" id="f-unlimited" onchange="toggleUnlimited()" style="width:18px;height:18px;cursor:pointer;accent-color:var(--dark)" />
+        <label for="f-unlimited" style="font-size:14px;cursor:pointer;color:#374151">Onbeperkt geldig</label>
+      </div>
       <input class="form-input" type="date" id="f-expiry" />
       <label class="form-label mt">Saldocheck URL (optioneel)</label>
       <input class="form-input" id="f-balance-url" placeholder="https://..." />
@@ -360,10 +364,10 @@ function showScreen(name) {
   if(name==='overview') renderOverview();
 }
 
-function daysUntil(d) { if(!d)return null; const t=new Date();t.setHours(0,0,0,0);return Math.ceil((new Date(d)-t)/86400000); }
+function daysUntil(d) { if(!d||d==='unlimited')return null; const t=new Date();t.setHours(0,0,0,0);return Math.ceil((new Date(d)-t)/86400000); }
 function formatDate(d) { if(!d)return''; return new Date(d).toLocaleDateString('nl-NL',{day:'2-digit',month:'short',year:'numeric'}); }
 function expiryBadge(d) {
-  if(!d)return''; const n=daysUntil(d);
+  if(!d)return''; if(d==='unlimited')return'<span class="badge badge-ok">♾️ Onbeperkt</span>'; const n=daysUntil(d);
   if(n<0) return`<span class="badge badge-expired">Verlopen</span>`;
   if(n<=30)return`<span class="badge badge-warning">⚠ ${n}d</span>`;
   if(n<=90)return`<span class="badge badge-soon">${n}d</span>`;
@@ -399,7 +403,7 @@ function renderCards() {
   let f=cards.filter(c=>fs==='all'||c.store===fs).filter(c=>!search||c.store.toLowerCase().includes(search)||(c.nickname||'').toLowerCase().includes(search));
   f.sort((a,b)=>{
     if(sb==='name')return a.store.localeCompare(b.store);
-    if(sb==='expiry'){if(!a.expiryDate)return 1;if(!b.expiryDate)return-1;return new Date(a.expiryDate)-new Date(b.expiryDate);}
+    if(sb==='expiry'){if(!a.expiryDate||a.expiryDate==='unlimited')return 1;if(!b.expiryDate||b.expiryDate==='unlimited')return-1;return new Date(a.expiryDate)-new Date(b.expiryDate);}
     if(sb==='balance')return(parseFloat(b.balance)||0)-(parseFloat(a.balance)||0);
     return 0;
   });
@@ -437,7 +441,7 @@ function showDetail(id) {
   let rows=`<div class="detail-row"><span class="detail-label">🔢 Kaartnummer</span><div class="detail-actions"><code class="code-text">${showCodes[id]?card.code:'••••••••••••'}</code><button class="btn-icon" onclick="toggleCode('${id}')">${showCodes[id]?'🙈':'👁️'}</button><button class="btn-icon" id="copy-code-${id}" onclick="copyText('${card.code}','copy-code-${id}')">📋</button></div></div>`;
   if(card.pin)rows+=`<div class="detail-row"><span class="detail-label">🔐 Pincode</span><div class="detail-actions"><code class="code-text">${showPins[id]?card.pin:'••••'}</code><button class="btn-icon" onclick="togglePin('${id}')">${showPins[id]?'🙈':'👁️'}</button><button class="btn-icon" id="copy-pin-${id}" onclick="copyText('${card.pin}','copy-pin-${id}')">📋</button></div></div>`;
   if(card.balance)rows+=`<div class="detail-row"><span class="detail-label">💰 Saldo</span><span class="detail-value">€ ${parseFloat(card.balance).toFixed(2)}</span></div>`;
-  if(card.expiryDate)rows+=`<div class="detail-row"><span class="detail-label">📅 Vervaldatum</span><span class="detail-value">${formatDate(card.expiryDate)} ${expiryBadge(card.expiryDate)}</span></div>`;
+  if(card.expiryDate)rows+=`<div class="detail-row"><span class="detail-label">📅 Vervaldatum</span><span class="detail-value">${card.expiryDate==='unlimited'?'♾️ Onbeperkt geldig':formatDate(card.expiryDate)+' '+expiryBadge(card.expiryDate)}</span></div>`;
   if(card.notes)rows+=`<div class="detail-row column"><span class="detail-label">📝 Notities</span><span style="font-size:14px;color:#4b5563">${card.notes}</span></div>`;
   document.getElementById('detail-section').innerHTML=rows;
   const lnk=document.getElementById('detail-balance-link');
@@ -463,14 +467,26 @@ function fillForm(card){
   document.getElementById('f-code').value=card.code||'';
   document.getElementById('f-pin').value=card.pin||'';
   document.getElementById('f-balance').value=card.balance||'';
-  document.getElementById('f-expiry').value=card.expiryDate||'';
+  const isUnlimited = card.expiryDate==='unlimited';
+  document.getElementById('f-unlimited').checked=isUnlimited;
+  document.getElementById('f-expiry').value=isUnlimited?'':(card.expiryDate||'');
+  toggleUnlimited();
   document.getElementById('f-balance-url').value=card.balanceUrl||'';
   document.getElementById('f-notes').value=card.notes||'';
   onStoreChange();checkFormValid();
 }
 
+function toggleUnlimited(){
+  const cb=document.getElementById('f-unlimited');
+  const di=document.getElementById('f-expiry');
+  di.disabled=cb.checked;
+  di.style.opacity=cb.checked?'0.4':'1';
+  if(cb.checked) di.value='';
+}
+
 function clearForm(){
   ['f-store','f-custom-store','f-nickname','f-code','f-pin','f-balance','f-expiry','f-balance-url','f-notes'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('f-unlimited').checked=false; toggleUnlimited();
   document.getElementById('f-custom-color').value='#6b7280';
   document.getElementById('f-custom-emoji').value='💳';
   onStoreChange();checkFormValid();
@@ -500,7 +516,7 @@ function saveCard(){
     code:document.getElementById('f-code').value.trim(),
     pin:document.getElementById('f-pin').value,
     balance:document.getElementById('f-balance').value,
-    expiryDate:document.getElementById('f-expiry').value,
+    expiryDate:document.getElementById('f-unlimited').checked?'unlimited':document.getElementById('f-expiry').value,
     balanceUrl:document.getElementById('f-balance-url').value||si.url||'',
     notes:document.getElementById('f-notes').value,
     createdAt:editMode?(cards.find(c=>c.id===currentCardId)||{}).createdAt:new Date().toISOString(),
