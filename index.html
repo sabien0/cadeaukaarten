@@ -193,6 +193,13 @@
       <div class="stat-box"><div id="stat-expiring" class="stat-value" style="color:var(--green)">0</div><div class="stat-label">Verloopt binnenkort</div></div>
       <div class="stat-box"><div id="stat-expired" class="stat-value" style="color:var(--green)">0</div><div class="stat-label">Verlopen</div></div>
     </div>
+    <div id="backup-bar" style="display:none;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+      <button onclick="exportCards()" style="flex:1;background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:10px;padding:9px 14px;font-size:13px;font-weight:600;color:#15803d;cursor:pointer;">📤 Exporteer backup</button>
+      <label style="flex:1;background:#f0f4ff;border:1.5px solid #bfdbfe;border-radius:10px;padding:9px 14px;font-size:13px;font-weight:600;color:#1d4ed8;cursor:pointer;text-align:center;">
+        📥 Importeer backup
+        <input type="file" accept=".json" onchange="importCards(event)" style="display:none" />
+      </label>
+    </div>
     <div id="toolbar" class="toolbar" style="display:none">
       <input class="search-input" id="search-input" placeholder="🔍 Zoeken..." oninput="renderCards()" />
       <select class="filter-select" id="filter-store" onchange="renderCards()"><option value="all">Alle winkels</option></select>
@@ -340,7 +347,6 @@ let cards=[], currentCardId=null, editMode=false, showCodes={}, showPins={};
 
 function loadCards() {
   try {
-    // Migrate from old keys if needed
     const raw = localStorage.getItem('cadeaukaarten_v1')
              || localStorage.getItem('giftcards_v2')
              || localStorage.getItem('giftcards_v1');
@@ -389,6 +395,7 @@ function renderOverview() {
   document.getElementById('btn-add-header').style.display=count>0?'block':'none';
   document.getElementById('stats-row').style.display=count>0?'grid':'none';
   document.getElementById('toolbar').style.display=count>0?'flex':'none';
+  document.getElementById('backup-bar').style.display='flex';
   if(count>0){
     const total=cards.reduce((s,c)=>s+(parseFloat(c.balance)||0),0);
     const es=cards.filter(c=>{const d=daysUntil(c.expiryDate);return d!==null&&d>=0&&d<=30;}).length;
@@ -535,6 +542,41 @@ function saveCard(){
 function deleteCurrentCard(){
   if(!confirm('Weet je zeker dat je deze kaart wilt verwijderen?'))return;
   cards=cards.filter(c=>c.id!==currentCardId);saveCards();showScreen('overview');
+}
+
+function exportCards() {
+  if(cards.length===0){alert('Geen kaarten om te exporteren.');return;}
+  const data = JSON.stringify({exportDate:new Date().toISOString(),cards}, null, 2);
+  const blob = new Blob([data],{type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href=url;
+  const d=new Date();
+  a.download=`cadeaukaarten-backup-${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importCards(event) {
+  const file = event.target.files[0];
+  if(!file)return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = JSON.parse(e.target.result);
+      const imported = data.cards || (Array.isArray(data) ? data : null);
+      if(!imported) throw new Error('Ongeldig formaat');
+      if(!confirm(`${imported.length} kaarten gevonden. Wil je deze importeren? Je huidige kaarten worden vervangen.`))return;
+      cards = imported;
+      saveCards();
+      showScreen('overview');
+      alert('✅ ' + imported.length + ' kaarten succesvol geïmporteerd!');
+    } catch(err) {
+      alert('❌ Fout bij importeren: ' + err.message);
+    }
+    event.target.value='';
+  };
+  reader.readAsText(file);
 }
 
 window.addEventListener('DOMContentLoaded',()=>{
