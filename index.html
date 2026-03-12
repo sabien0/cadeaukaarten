@@ -3,189 +3,200 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-  <title>🎁 Mijn Cadeaukaarten</title>
+  <title>🎁 Cadeaukaarten</title>
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-  <meta name="apple-mobile-web-app-title" content="Mijn Kaarten" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Cadeaukaarten" />
   <meta name="theme-color" content="#1a1a2e" />
   <link rel="manifest" href="manifest.json" />
   <link rel="apple-touch-icon" href="icon-192.png" />
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
   <style>
     :root {
-      --bg: #f7f5f2;
-      --surface: #ffffff;
-      --dark: #1a1a2e;
-      --muted: #6b7280;
-      --border: #e8e4de;
-      --green: #10b981;
-      --orange: #f59e0b;
-      --red: #ef4444;
-      --radius: 16px;
-      --shadow: 0 2px 12px rgba(0,0,0,0.07);
+      --bg: #f7f5f2; --surface: #ffffff; --dark: #1a1a2e; --muted: #6b7280;
+      --border: #e8e4de; --green: #10b981; --orange: #f59e0b; --red: #ef4444;
+      --radius: 16px; --shadow: 0 2px 12px rgba(0,0,0,0.07);
     }
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
     body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--dark); min-height: 100vh; padding-bottom: 80px; }
     h1, h2, .card-store { font-family: 'Syne', sans-serif; }
     .container { max-width: 480px; margin: 0 auto; padding: 0 16px; }
 
-    /* LOGIN SCREEN */
-    #screen-pin { min-height:100vh; display:flex; align-items:center; justify-content:center; background:var(--dark); }
-    .pin-box { text-align:center; padding:40px 32px; width:100%; max-width:340px; }
-    .pin-logo { margin-bottom:16px; }
-    .pin-title { font-family:'Syne',sans-serif; font-size:24px; font-weight:800; color:#fff; margin-bottom:4px; }
-    .pin-subtitle { font-size:14px; color:#9ca3af; margin-bottom:36px; }
-    .btn-google { display:flex; align-items:center; justify-content:center; gap:12px; width:100%; background:#fff; color:#1f2937; border:none; border-radius:14px; padding:14px 20px; font-size:15px; font-weight:600; cursor:pointer; transition:opacity .15s,transform .1s; font-family:'DM Sans',sans-serif; box-shadow:0 2px 12px rgba(0,0,0,0.25); }
-    .btn-google:hover { opacity:0.93; }
-    .btn-google:active { transform:scale(0.97); opacity:0.85; }
-    .btn-google svg { width:20px; height:20px; flex-shrink:0; }
-    .login-divider { color:#4b5563; font-size:12px; margin:20px 0 8px; }
-    .login-note { color:#6b7280; font-size:11px; margin-top:20px; }
-    .login-error { color:#f87171; font-size:13px; margin-top:14px; min-height:20px; }
+    /* LOGIN */
+    .login-screen { position:fixed;top:0;left:0;right:0;bottom:0;background:var(--dark);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:500;padding:32px 24px; }
+    .login-screen.hidden { display:none; }
+    .login-logo { margin-bottom:16px; }
+    .login-title { font-family:'Syne',sans-serif;font-size:28px;font-weight:800;color:white;margin-bottom:8px; }
+    .login-sub { font-size:14px;color:rgba(255,255,255,0.55);margin-bottom:48px;text-align:center;line-height:1.6; }
+    .login-google-btn { display:flex;align-items:center;gap:12px;background:white;color:#333;border:none;padding:14px 28px;border-radius:14px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:600;cursor:pointer;transition:all 0.2s;width:100%;max-width:320px;justify-content:center;box-shadow:0 4px 16px rgba(0,0,0,0.3); }
+    .login-google-btn:hover { transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,0.4); }
+    .login-status { margin-top:16px;font-size:13px;color:rgba(255,255,255,0.4);min-height:20px;text-align:center; }
+
+    /* SYNC */
+    .sync-dot { width:7px;height:7px;border-radius:50%;background:#86efac;flex-shrink:0; }
+    .sync-dot.syncing { background:#fbbf24;animation:pulse 1s infinite; }
+    .sync-dot.error { background:#f87171; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+    /* HEADER */
+    .app-header { background:var(--dark);padding:12px 16px;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(0,0,0,0.2); }
+    .app-header-inner { max-width:480px;margin:0 auto;display:flex;align-items:center;gap:10px; }
+    .app-header-title { font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:white;flex:1; }
+    .sync-row { display:flex;align-items:center;gap:5px;font-size:11px;color:rgba(255,255,255,0.5); }
+    .user-avatar { width:30px;height:30px;border-radius:50%;border:2px solid rgba(255,255,255,0.3);object-fit:cover;cursor:pointer; }
+
+    /* PROFILE MODAL */
+    .profile-modal-overlay { position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:300;display:none;align-items:flex-end;justify-content:center;backdrop-filter:blur(3px); }
+    .profile-modal-overlay.open { display:flex; }
+    .profile-modal { background:white;border-radius:24px 24px 0 0;padding:24px 20px 40px;width:100%;max-width:480px;animation:slideUp 0.3s ease; }
+    @keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
+    .profile-handle { width:40px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 20px; }
+    .btn-uitloggen { width:100%;padding:13px;border-radius:12px;border:1.5px solid #fca5a5;background:white;color:#dc2626;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:600;cursor:pointer; }
 
     /* GENERAL */
-    .hero-header { display:flex; justify-content:space-between; align-items:center; padding:28px 0 16px; }
-    .app-title { font-size:26px; font-weight:800; letter-spacing:-0.5px; }
-    .app-subtitle { font-size:13px; color:var(--muted); margin-top:3px; }
-    .save-indicator { font-size:12px; margin-left:8px; }
-    .save-saving { color:#9ca3af; } .save-saved { color:var(--green); } .save-error { color:var(--red); }
-    .btn-primary { background:var(--dark); color:#fff; border:none; border-radius:12px; padding:10px 18px; font-family:'Syne',sans-serif; font-weight:700; font-size:14px; cursor:pointer; white-space:nowrap; transition:opacity .15s; }
+    .hero-header { display:flex;justify-content:space-between;align-items:center;padding:22px 0 14px; }
+    .app-title { font-size:22px;font-weight:800;letter-spacing:-0.5px; }
+    .app-subtitle { font-size:13px;color:var(--muted);margin-top:3px; }
+    .btn-primary { background:var(--dark);color:#fff;border:none;border-radius:12px;padding:10px 18px;font-family:'Syne',sans-serif;font-weight:700;font-size:14px;cursor:pointer;white-space:nowrap;transition:opacity .15s; }
     .btn-primary:active { opacity:0.8; }
-    .btn-primary.full { width:100%; padding:14px; font-size:15px; border-radius:14px; margin-top:8px; }
-    .btn-primary:disabled { opacity:0.4; cursor:default; }
-    .btn-back { background:none; border:1.5px solid var(--border); border-radius:10px; padding:7px 14px; font-size:14px; cursor:pointer; color:#374151; font-weight:600; }
-    .btn-edit { background:#f3f4f6; border:none; border-radius:10px; padding:7px 14px; font-size:13px; cursor:pointer; font-weight:600; }
-    .btn-delete { background:#fee2e2; border:none; border-radius:10px; padding:7px 14px; font-size:14px; cursor:pointer; }
-    .btn-icon { background:#f3f4f6; border:none; border-radius:8px; padding:5px 9px; cursor:pointer; font-size:14px; transition:background .15s; }
+    .btn-primary.full { width:100%;padding:14px;font-size:15px;border-radius:14px;margin-top:8px; }
+    .btn-primary:disabled { opacity:0.4;cursor:default; }
+    .btn-back { background:none;border:1.5px solid var(--border);border-radius:10px;padding:7px 14px;font-size:14px;cursor:pointer;color:#374151;font-weight:600; }
+    .btn-edit { background:#f3f4f6;border:none;border-radius:10px;padding:7px 14px;font-size:13px;cursor:pointer;font-weight:600; }
+    .btn-delete { background:#fee2e2;border:none;border-radius:10px;padding:7px 14px;font-size:14px;cursor:pointer; }
+    .btn-icon { background:#f3f4f6;border:none;border-radius:8px;padding:5px 9px;cursor:pointer;font-size:14px;transition:background .15s; }
     .btn-icon.copied { background:#d1fae5; }
-    .btn-lock { background:none; border:1.5px solid var(--border); border-radius:10px; padding:6px 10px; font-size:16px; cursor:pointer; color:var(--muted); }
-    .btn-balance-check { display:block; background:var(--dark); color:#fff; border-radius:14px; padding:14px; text-align:center; font-weight:700; font-size:15px; text-decoration:none; margin-bottom:14px; font-family:'Syne',sans-serif; }
-    .stats-row { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:18px; }
-    .stat-box { background:var(--surface); border-radius:14px; padding:12px 10px; text-align:center; box-shadow:var(--shadow); }
-    .stat-value { font-family:'Syne',sans-serif; font-size:18px; font-weight:800; }
-    .stat-label { font-size:11px; color:var(--muted); margin-top:2px; }
-    .toolbar { display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; }
-    .search-input,.filter-select { border:1.5px solid var(--border); border-radius:10px; padding:8px 12px; font-size:14px; outline:none; background:var(--surface); font-family:'DM Sans',sans-serif; color:var(--dark); }
+    .btn-balance-check { display:block;background:var(--dark);color:#fff;border-radius:14px;padding:14px;text-align:center;font-weight:700;font-size:15px;text-decoration:none;margin-bottom:14px;font-family:'Syne',sans-serif; }
+    .stats-row { display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px; }
+    .stat-box { background:var(--surface);border-radius:14px;padding:12px 10px;text-align:center;box-shadow:var(--shadow); }
+    .stat-value { font-family:'Syne',sans-serif;font-size:18px;font-weight:800; }
+    .stat-label { font-size:11px;color:var(--muted);margin-top:2px; }
+    .toolbar { display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap; }
+    .search-input,.filter-select { border:1.5px solid var(--border);border-radius:10px;padding:8px 12px;font-size:14px;outline:none;background:var(--surface);font-family:'DM Sans',sans-serif;color:var(--dark); }
     .search-input { flex:1 1 140px; }
     .filter-select { cursor:pointer; }
-    .cards-list { display:flex; flex-direction:column; gap:10px; }
-    .card-tile { background:var(--surface); border-radius:var(--radius); overflow:hidden; box-shadow:var(--shadow); cursor:pointer; display:flex; transition:transform .1s; }
+    .cards-list { display:flex;flex-direction:column;gap:10px; }
+    .card-tile { background:var(--surface);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);cursor:pointer;display:flex;transition:transform .1s; }
     .card-tile:active { transform:scale(0.98); }
     .card-tile.expired { opacity:0.55; }
-    .card-tile-bar { width:5px; flex-shrink:0; }
-    .card-tile-content { padding:12px 14px; flex:1; min-width:0; }
-    .card-tile-top { display:flex; align-items:center; gap:10px; margin-bottom:4px; }
-    .card-tile-emoji { font-size:22px; flex-shrink:0; }
-    .card-tile-store { font-size:15px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    .card-tile-nick { font-size:12px; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    .card-tile-balance { font-family:'Syne',sans-serif; font-size:18px; font-weight:800; margin-bottom:2px; }
-    .card-tile-code { font-size:12px; color:var(--muted); font-family:monospace; }
-    .badge { border-radius:20px; padding:2px 8px; font-size:11px; font-weight:700; white-space:nowrap; flex-shrink:0; }
-    .badge-expired { background:#fee2e2; color:#dc2626; }
-    .badge-warning { background:#fef3c7; color:#d97706; }
-    .badge-soon { background:#dbeafe; color:#2563eb; }
-    .badge-ok { background:#d1fae5; color:#059669; }
-    .empty-state { text-align:center; padding:60px 20px; }
+    .card-tile-bar { width:5px;flex-shrink:0; }
+    .card-tile-content { padding:12px 14px;flex:1;min-width:0; }
+    .card-tile-top { display:flex;align-items:center;gap:10px;margin-bottom:4px; }
+    .card-tile-emoji { font-size:22px;flex-shrink:0; }
+    .card-tile-store { font-size:15px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+    .card-tile-nick { font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+    .card-tile-balance { font-family:'Syne',sans-serif;font-size:18px;font-weight:800;margin-bottom:2px; }
+    .card-tile-code { font-size:12px;color:var(--muted);font-family:monospace; }
+    .badge { border-radius:20px;padding:2px 8px;font-size:11px;font-weight:700;white-space:nowrap;flex-shrink:0; }
+    .badge-expired { background:#fee2e2;color:#dc2626; }
+    .badge-warning { background:#fef3c7;color:#d97706; }
+    .badge-soon { background:#dbeafe;color:#2563eb; }
+    .badge-ok { background:#d1fae5;color:#059669; }
+    .empty-state { text-align:center;padding:60px 20px; }
     .empty-emoji { font-size:60px; }
-    .empty-title { font-family:'Syne',sans-serif; font-size:20px; font-weight:700; margin-top:16px; }
-    .empty-text { font-size:14px; color:var(--muted); margin-top:8px; }
-    .page-header { display:flex; justify-content:space-between; align-items:center; padding:20px 0 16px; }
-    .page-title { font-size:18px; font-weight:700; }
-    .card-visual { border-radius:20px; padding:22px 24px; color:#fff; margin-bottom:16px; position:relative; overflow:hidden; min-height:140px; }
-    .card-visual-top { display:flex; align-items:center; gap:12px; margin-bottom:12px; }
+    .empty-title { font-family:'Syne',sans-serif;font-size:20px;font-weight:700;margin-top:16px; }
+    .empty-text { font-size:14px;color:var(--muted);margin-top:8px; }
+    .page-header { display:flex;justify-content:space-between;align-items:center;padding:20px 0 16px; }
+    .page-title { font-size:18px;font-weight:700; }
+    .card-visual { border-radius:20px;padding:22px 24px;color:#fff;margin-bottom:16px;position:relative;overflow:hidden;min-height:140px; }
+    .card-visual-top { display:flex;align-items:center;gap:12px;margin-bottom:12px; }
     .card-visual-emoji { font-size:32px; }
-    .card-store { font-size:20px; font-weight:800; }
-    .card-nickname { font-size:13px; opacity:0.8; }
-    .card-balance { font-family:'Syne',sans-serif; font-size:32px; font-weight:900; letter-spacing:-1px; margin-bottom:8px; }
-    .card-code-display { font-family:monospace; font-size:15px; letter-spacing:2px; opacity:0.85; }
-    .expired-overlay { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%) rotate(-20deg); font-family:'Syne',sans-serif; font-size:36px; font-weight:900; color:rgba(255,255,255,0.35); border:4px solid rgba(255,255,255,0.35); padding:6px 20px; border-radius:8px; letter-spacing:4px; pointer-events:none; }
-    .detail-section { background:var(--surface); border-radius:var(--radius); padding:4px 0; margin-bottom:14px; box-shadow:var(--shadow); }
-    .detail-row { display:flex; justify-content:space-between; align-items:center; padding:12px 16px; border-bottom:1px solid #f3f4f6; gap:8px; }
+    .card-balance { font-family:'Syne',sans-serif;font-size:32px;font-weight:900;letter-spacing:-1px;margin-bottom:8px; }
+    .card-code-display { font-family:monospace;font-size:15px;letter-spacing:2px;opacity:0.85; }
+    .expired-overlay { position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-20deg);font-family:'Syne',sans-serif;font-size:36px;font-weight:900;color:rgba(255,255,255,0.35);border:4px solid rgba(255,255,255,0.35);padding:6px 20px;border-radius:8px;letter-spacing:4px;pointer-events:none; }
+    .detail-section { background:var(--surface);border-radius:var(--radius);padding:4px 0;margin-bottom:14px;box-shadow:var(--shadow); }
+    .detail-row { display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid #f3f4f6;gap:8px; }
     .detail-row:last-child { border-bottom:none; }
-    .detail-row.column { flex-direction:column; align-items:flex-start; gap:4px; }
-    .detail-label { font-size:13px; color:var(--muted); font-weight:600; flex-shrink:0; }
-    .detail-value { font-size:14px; font-weight:600; text-align:right; display:flex; align-items:center; gap:6px; flex-wrap:wrap; justify-content:flex-end; }
-    .detail-actions { display:flex; align-items:center; gap:6px; }
-    .code-text { font-family:monospace; font-size:13px; background:#f3f4f6; padding:3px 8px; border-radius:6px; letter-spacing:1px; }
-    .barcode-box { background:var(--surface); border-radius:var(--radius); padding:18px 16px; text-align:center; box-shadow:var(--shadow); }
-    .barcode-title { font-weight:700; font-size:14px; margin-bottom:12px; }
-    .barcode-stripes { display:flex; justify-content:center; align-items:stretch; height:56px; gap:1.5px; margin-bottom:8px; }
-    .bar-stripe { background:var(--dark); border-radius:1px; height:100%; }
-    .barcode-code { font-family:monospace; font-size:13px; color:#374151; letter-spacing:2px; margin-top:4px; }
-    .barcode-hint { font-size:11px; color:#9ca3af; margin-top:4px; }
-    .form-card { background:var(--surface); border-radius:18px; padding:20px; box-shadow:var(--shadow); }
-    .form-label { display:block; font-size:13px; font-weight:600; color:#374151; margin-bottom:6px; }
+    .detail-row.column { flex-direction:column;align-items:flex-start;gap:4px; }
+    .detail-label { font-size:13px;color:var(--muted);font-weight:600;flex-shrink:0; }
+    .detail-value { font-size:14px;font-weight:600;text-align:right;display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end; }
+    .detail-actions { display:flex;align-items:center;gap:6px; }
+    .code-text { font-family:monospace;font-size:13px;background:#f3f4f6;padding:3px 8px;border-radius:6px;letter-spacing:1px; }
+    .barcode-box { background:var(--surface);border-radius:var(--radius);padding:18px 16px;text-align:center;box-shadow:var(--shadow); }
+    .barcode-title { font-weight:700;font-size:14px;margin-bottom:12px; }
+    .barcode-stripes { display:flex;justify-content:center;align-items:stretch;height:56px;gap:1.5px;margin-bottom:8px; }
+    .bar-stripe { background:var(--dark);border-radius:1px;height:100%; }
+    .barcode-code { font-family:monospace;font-size:13px;color:#374151;letter-spacing:2px;margin-top:4px; }
+    .barcode-hint { font-size:11px;color:#9ca3af;margin-top:4px; }
+    .form-card { background:var(--surface);border-radius:18px;padding:20px;box-shadow:var(--shadow); }
+    .form-label { display:block;font-size:13px;font-weight:600;color:#374151;margin-bottom:6px; }
     .form-label.mt { margin-top:16px; }
-    .form-input,.form-select,.form-textarea { width:100%; border:1.5px solid var(--border); border-radius:10px; padding:10px 12px; font-size:14px; outline:none; background:#fafafa; font-family:'DM Sans',sans-serif; color:var(--dark); }
-    .form-textarea { min-height:72px; resize:vertical; }
+    .form-input,.form-select,.form-textarea { width:100%;border:1.5px solid var(--border);border-radius:10px;padding:10px 12px;font-size:14px;outline:none;background:#fafafa;font-family:'DM Sans',sans-serif;color:var(--dark); }
+    .form-textarea { min-height:72px;resize:vertical; }
     .form-select { cursor:pointer; }
-    .custom-store-box { background:#f9fafb; border-radius:12px; padding:14px; margin-top:10px; }
-    .custom-store-row { display:flex; gap:12px; margin-top:12px; }
+    .custom-store-box { background:#f9fafb;border-radius:12px;padding:14px;margin-top:10px; }
+    .custom-store-row { display:flex;gap:12px;margin-top:12px; }
     .custom-store-row > div { flex:1; }
-    input[type=color].form-input { padding:4px; height:44px; cursor:pointer; }
+    input[type=color].form-input { padding:4px;height:44px;cursor:pointer; }
     .screen { display:none; }
     .screen.active { display:block; }
-    .no-results { text-align:center; color:#9ca3af; padding:40px 0; }
-    .loading-screen { display:flex; align-items:center; justify-content:center; min-height:100vh; text-align:center; }
-    .loading-emoji { font-size:48px; margin-bottom:16px; }
-    .loading-text { font-size:16px; color:var(--muted); font-weight:600; }
+    .no-results { text-align:center;color:#9ca3af;padding:40px 0; }
+    .loading-screen { display:flex;align-items:center;justify-content:center;min-height:100vh;text-align:center; }
+    .loading-emoji { font-size:48px;margin-bottom:16px; }
+    .loading-text { font-size:16px;color:var(--muted);font-weight:600; }
   </style>
 </head>
 <body>
 
+<!-- Login scherm -->
+<div class="login-screen" id="login-screen">
+  <div class="login-logo"><img src="icon-192.png" style="width:80px;height:80px;border-radius:20px" /></div>
+  <h1 class="login-title">Cadeaukaarten</h1>
+  <p class="login-sub">Bewaar je cadeaukaarten op één plek,<br>overal beschikbaar via je Google account</p>
+  <button class="login-google-btn" onclick="loginMetGoogle()">
+    <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.08 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-3.59-13.48-8.71l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+    Inloggen met Google
+  </button>
+  <div class="login-status" id="login-status"></div>
+</div>
+
+<!-- Profiel modal -->
+<div class="profile-modal-overlay" id="profile-modal" onclick="sluitProfielModal(event)">
+  <div class="profile-modal">
+    <div class="profile-handle"></div>
+    <div id="profile-avatar-lg" style="margin-bottom:12px"></div>
+    <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;margin-bottom:4px" id="profile-name"></div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:24px" id="profile-email"></div>
+    <button class="btn-uitloggen" onclick="uitloggen()">🚪 Uitloggen</button>
+  </div>
+</div>
+
+<!-- App header -->
+<div class="app-header" id="app-header" style="display:none">
+  <div class="app-header-inner">
+    <span style="font-size:20px">🎁</span>
+    <span class="app-header-title">Cadeaukaarten</span>
+    <div class="sync-row" id="sync-indicator" style="display:none">
+      <div class="sync-dot" id="sync-dot"></div>
+      <span id="sync-label">opgeslagen</span>
+    </div>
+    <img id="header-avatar" src="" class="user-avatar" style="display:none" onclick="openProfielModal()" />
+  </div>
+</div>
+
+<!-- Loading -->
 <div id="screen-loading" class="loading-screen">
   <div><div class="loading-emoji">🎁</div><div class="loading-text">Laden...</div></div>
 </div>
 
-<div id="screen-pin" style="display:none">
-  <div class="pin-box">
-    <div class="pin-logo"><img src="icon-192.png" style="width:80px;height:80px;border-radius:20px;box-shadow:0 4px 20px rgba(0,0,0,0.3)" /></div>
-    <div class="pin-title" style="margin-top:16px">Mijn Kaarten</div>
-    <div class="pin-subtitle">Beheer al je cadeaukaarten op één plek</div>
-    <button class="btn-google" onclick="signInWithGoogle()">
-      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
-        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-      </svg>
-      Inloggen met Google
-    </button>
-    <div class="login-error" id="login-error"></div>
-    <div class="login-note">🔒 Je kaarten zijn alleen zichtbaar voor jou</div>
-  </div>
-</div>
-
+<!-- Overview -->
 <div id="screen-overview" class="screen">
   <div class="container">
     <div class="hero-header">
       <div>
-        <h1 class="app-title">🎁 Mijn Kaarten</h1>
-        <p class="app-subtitle">
-          <span id="card-count">0 kaarten</span>
-          <span id="save-indicator" class="save-indicator"></span>
-        </p>
+        <h1 class="app-title">Mijn kaarten</h1>
+        <p class="app-subtitle"><span id="card-count">0 kaarten</span></p>
       </div>
-      <div style="display:flex;gap:8px;align-items:center">
-        <button id="btn-add-header" class="btn-primary" onclick="showAddScreen()" style="display:none">+ Toevoegen</button>
-        <div id="user-avatar" style="display:none;align-items:center;gap:8px">
-          <img id="avatar-img" style="width:32px;height:32px;border-radius:50%;object-fit:cover;border:2px solid var(--border)" />
-          <button class="btn-lock" onclick="signOut()" title="Uitloggen">🚪</button>
-        </div>
-      </div>
+      <button id="btn-add-header" class="btn-primary" onclick="showAddScreen()" style="display:none">+ Toevoegen</button>
     </div>
     <div id="stats-row" class="stats-row" style="display:none">
       <div class="stat-box"><div id="stat-total" class="stat-value">€0</div><div class="stat-label">Totaal saldo</div></div>
-      <div class="stat-box"><div id="stat-expiring" class="stat-value" style="color:var(--green)">0</div><div class="stat-label">Verloopt binnenkort</div></div>
-      <div class="stat-box"><div id="stat-expired" class="stat-value" style="color:var(--green)">0</div><div class="stat-label">Verlopen</div></div>
-    </div>
-    <div id="backup-bar" style="display:none;gap:8px;margin-bottom:14px;flex-wrap:wrap">
-      <button onclick="exportCards()" style="flex:1;background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:10px;padding:9px 14px;font-size:13px;font-weight:600;color:#15803d;cursor:pointer;">📤 Exporteer backup</button>
-      <label style="flex:1;background:#f0f4ff;border:1.5px solid #bfdbfe;border-radius:10px;padding:9px 14px;font-size:13px;font-weight:600;color:#1d4ed8;cursor:pointer;text-align:center;">
-        📥 Importeer backup
-        <input type="file" accept=".json" onchange="importCards(event)" style="display:none" />
-      </label>
+      <div class="stat-box"><div id="stat-expiring" class="stat-value">0</div><div class="stat-label">Verloopt binnenkort</div></div>
+      <div class="stat-box"><div id="stat-expired" class="stat-value">0</div><div class="stat-label">Verlopen</div></div>
     </div>
     <div id="toolbar" class="toolbar" style="display:none">
       <input class="search-input" id="search-input" placeholder="🔍 Zoeken..." oninput="renderCards()" />
@@ -207,6 +218,7 @@
   </div>
 </div>
 
+<!-- Toevoegen / bewerken -->
 <div id="screen-add" class="screen">
   <div class="container">
     <div class="page-header">
@@ -247,6 +259,7 @@
   </div>
 </div>
 
+<!-- Detail -->
 <div id="screen-detail" class="screen">
   <div class="container">
     <div class="page-header">
@@ -264,83 +277,121 @@
 </div>
 
 <script>
-// ── Firebase Google Auth ──────────────────────────────────────────────────────
-// NOTE: Replace the firebaseConfig below with your own Firebase project config.
-// Steps: console.firebase.google.com → New project → Authentication → Google
-// Then: Project settings → Your apps → Add web app → copy firebaseConfig
+// ====== FIREBASE ======
 const firebaseConfig = {
   apiKey: "AIzaSyApR9JnWABjkWPLYe4VlhY0EDf-7ECgN4E",
   authDomain: "cadeaukaarten-b05ee.firebaseapp.com",
   projectId: "cadeaukaarten-b05ee",
-  storageBucket: "cadeaukaarten-b05ee.firebasestorage.app",
-  messagingSenderId: "622247796036",
-  appId: "1:622247796036:web:f77303adabd107c61b0b11"
+  storageBucket: "cadeaukaarten-b05ee.appspot.com",
+  messagingSenderId: "656223685118",
+  appId: "1:656223685118:web:abc123cadeaukaarten"
 };
+if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const auth = firebase.auth();
 
-// Firebase is loaded via CDN scripts added at bottom of <body>
-let auth = null;
-let currentUser = null;
+// ====== STATE ======
+let cards = [], currentCardId = null, editMode = false;
+let showCodes = {}, showPins = {};
+let currentUser = null, isSyncing = false, lastSyncHash = '', syncUnsubscribe = null;
 
-function initFirebase() {
-  try {
-    firebase.initializeApp(firebaseConfig);
-    auth = firebase.auth();
-    auth.onAuthStateChanged(user => {
-      if (user) {
-        currentUser = user;
-        document.getElementById('screen-pin').style.display = 'none';
-        // Show avatar
-        const avatarEl = document.getElementById('user-avatar');
-        const avatarImg = document.getElementById('avatar-img');
-        if (avatarEl) avatarEl.style.display = 'flex';
-        if (avatarImg && user.photoURL) avatarImg.src = user.photoURL;
-        loadCards();
-        showScreen('overview');
-      } else {
-        currentUser = null;
-        document.getElementById('screen-loading').style.display = 'none';
-        document.getElementById('screen-pin').style.display = 'flex';
-        const avatarEl = document.getElementById('user-avatar');
-        if (avatarEl) avatarEl.style.display = 'none';
-      }
-    });
-  } catch(e) {
-    console.error('Firebase init error:', e);
-    document.getElementById('screen-loading').style.display = 'none';
-    document.getElementById('screen-pin').style.display = 'flex';
-    document.getElementById('login-error').textContent = 'Firebase configuratie ontbreekt. Zie de HTML voor instructies.';
-  }
+// ====== AUTH ======
+function loginMetGoogle() {
+  const statusEl = document.getElementById('login-status');
+  statusEl.textContent = 'Bezig met inloggen...';
+  const provider = new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(provider).catch(e => {
+    statusEl.textContent = e.code === 'auth/popup-blocked'
+      ? 'Popup geblokkeerd — sta popups toe voor deze site'
+      : e.code === 'auth/popup-closed-by-user' ? ''
+      : 'Inloggen mislukt, probeer opnieuw';
+    console.error(e);
+  });
 }
 
-function signInWithGoogle() {
-  if (!auth) {
-    document.getElementById('login-error').textContent = 'Firebase is niet geconfigureerd.';
+function uitloggen() {
+  if (!confirm('Wil je uitloggen?')) return;
+  if (syncUnsubscribe) syncUnsubscribe();
+  auth.signOut().then(() => location.reload());
+}
+
+function openProfielModal() { document.getElementById('profile-modal').classList.add('open'); }
+function sluitProfielModal(e) { if (e.target === document.getElementById('profile-modal')) document.getElementById('profile-modal').classList.remove('open'); }
+
+auth.onAuthStateChanged(async user => {
+  if (!user) {
+    document.getElementById('login-screen').classList.remove('hidden');
+    document.getElementById('screen-loading').style.display = 'none';
+    document.getElementById('app-header').style.display = 'none';
     return;
   }
-  const provider = new firebase.auth.GoogleAuthProvider();
-  document.getElementById('login-error').textContent = '';
-  auth.signInWithPopup(provider).catch(err => {
-    let msg = 'Inloggen mislukt. Probeer opnieuw.';
-    if (err.code === 'auth/popup-blocked') msg = 'Popup geblokkeerd door browser. Sta popups toe voor deze pagina.';
-    if (err.code === 'auth/cancelled-popup-request') return;
-    document.getElementById('login-error').textContent = msg;
-  });
+  currentUser = user;
+  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('app-header').style.display = 'block';
+
+  // Profiel invullen
+  if (user.photoURL) {
+    document.getElementById('header-avatar').src = user.photoURL;
+    document.getElementById('header-avatar').style.display = 'block';
+    document.getElementById('profile-avatar-lg').innerHTML = `<img src="${user.photoURL}" style="width:48px;height:48px;border-radius:50%;border:2px solid var(--border)">`;
+  } else {
+    document.getElementById('profile-avatar-lg').textContent = '👤';
+  }
+  document.getElementById('profile-name').textContent = user.displayName || 'Gebruiker';
+  document.getElementById('profile-email').textContent = user.email || '';
+
+  await laadEnStartApp();
+});
+
+async function laadEnStartApp() {
+  try {
+    const doc = await db.collection('cadeaukaarten').doc(currentUser.uid).get();
+    if (doc.exists && doc.data().cards) {
+      cards = doc.data().cards;
+      lastSyncHash = JSON.stringify(cards);
+    }
+  } catch(e) { console.error('Data laden fout:', e); }
+
+  syncUnsubscribe = db.collection('cadeaukaarten').doc(currentUser.uid).onSnapshot(doc => {
+    if (!doc.exists || !doc.data().cards) return;
+    const remoteStr = JSON.stringify(doc.data().cards);
+    if (remoteStr !== lastSyncHash) {
+      lastSyncHash = remoteStr;
+      cards = doc.data().cards;
+      if (document.querySelector('.screen.active')?.id === 'screen-overview') renderOverview();
+    }
+    setSyncIndicator('ok');
+  }, () => setSyncIndicator('error'));
+
+  showScreen('overview');
+  setSyncIndicator('ok');
 }
 
-function signOut() {
-  if (!auth) return;
-  if (!confirm('Wil je uitloggen?')) return;
-  auth.signOut().then(() => {
-    cards = [];
-    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  });
+// ====== SYNC ======
+function setSyncIndicator(state) {
+  const dot = document.getElementById('sync-dot');
+  const label = document.getElementById('sync-label');
+  document.getElementById('sync-indicator').style.display = 'flex';
+  dot.className = 'sync-dot' + (state === 'syncing' ? ' syncing' : state === 'error' ? ' error' : '');
+  label.textContent = state === 'syncing' ? 'opslaan...' : state === 'error' ? 'offline' : 'opgeslagen';
 }
 
-// Legacy lockApp kept for compatibility but now just signs out
-function lockApp() { signOut(); }
+async function pushSync() {
+  if (!currentUser || isSyncing) return;
+  const cardsStr = JSON.stringify(cards);
+  if (cardsStr === lastSyncHash) return;
+  isSyncing = true;
+  setSyncIndicator('syncing');
+  try {
+    await db.collection('cadeaukaarten').doc(currentUser.uid).set({ cards, bijgewerkt: Date.now() });
+    lastSyncHash = cardsStr;
+    setSyncIndicator('ok');
+  } catch(e) { setSyncIndicator('error'); console.error('Sync fout:', e); }
+  isSyncing = false;
+}
 
-// STORES
-const STORES=[
+// ====== STORES ======
+const STORES = [
   {name:"Bol.com",color:"#0063d3",emoji:"📦",url:"https://www.bol.com/nl/nl/cadeaukaart/"},
   {name:"H&M",color:"#e50010",emoji:"👗",url:"https://www2.hm.com/nl_nl/klantenservice/giftcard.html"},
   {name:"Zalando",color:"#ff6900",emoji:"👟",url:"https://www.zalando.nl/giftcard/"},
@@ -357,50 +408,12 @@ const STORES=[
   {name:"Andere",color:"#6b7280",emoji:"💳",url:null},
 ];
 
-let cards=[], currentCardId=null, editMode=false, showCodes={}, showPins={};
-
-function getStorageKey() {
-  return currentUser ? `cadeaukaarten_v1_${currentUser.uid}` : 'cadeaukaarten_v1';
-}
-
-function loadCards() {
-  try {
-    const key = getStorageKey();
-    const raw = localStorage.getItem(key)
-             || (currentUser ? null : localStorage.getItem('cadeaukaarten_v1'))
-             || localStorage.getItem('giftcards_v2')
-             || localStorage.getItem('giftcards_v1');
-    cards = raw ? JSON.parse(raw) : [];
-    localStorage.setItem(key, JSON.stringify(cards));
-  } catch { cards=[]; }
-}
-
-function saveCards() {
-  setSaveStatus('saving');
-  try { localStorage.setItem(getStorageKey(),JSON.stringify(cards)); setSaveStatus('saved'); setTimeout(()=>setSaveStatus(null),2000); }
-  catch { setSaveStatus('error'); }
-}
-
-function setSaveStatus(s) {
-  const el=document.getElementById('save-indicator'); if(!el)return;
-  if(!s){el.textContent='';return;}
-  const m={saving:['↑ opslaan...','save-saving'],saved:['✓ opgeslagen','save-saved'],error:['⚠ opslaan mislukt','save-error']};
-  el.className='save-indicator '+m[s][1]; el.textContent=m[s][0];
-}
-
-function showScreen(name) {
-  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-  document.getElementById('screen-loading').style.display='none';
-  document.getElementById('screen-pin').style.display='none';
-  const el=document.getElementById('screen-'+name);
-  if(el) el.classList.add('active');
-  if(name==='overview') renderOverview();
-}
-
+// ====== HELPERS ======
 function daysUntil(d) { if(!d||d==='unlimited')return null; const t=new Date();t.setHours(0,0,0,0);return Math.ceil((new Date(d)-t)/86400000); }
 function formatDate(d) { if(!d)return''; return new Date(d).toLocaleDateString('nl-NL',{day:'2-digit',month:'short',year:'numeric'}); }
 function expiryBadge(d) {
-  if(!d)return''; if(d==='unlimited')return'<span class="badge badge-ok">♾️ Onbeperkt</span>'; const n=daysUntil(d);
+  if(!d)return''; if(d==='unlimited')return'<span class="badge badge-ok">♾️ Onbeperkt</span>';
+  const n=daysUntil(d);
   if(n<0) return`<span class="badge badge-expired">Verlopen</span>`;
   if(n<=30)return`<span class="badge badge-warning">⚠ ${n}d</span>`;
   if(n<=90)return`<span class="badge badge-soon">${n}d</span>`;
@@ -409,13 +422,23 @@ function expiryBadge(d) {
 function maskCode(c){return c.substring(0,4)+'••••••••';}
 function generateBarcode(){const w=[2,1,3,1,2,1,2,3,1,2];let h='';for(let i=0;i<42;i++)h+=`<div class="bar-stripe" style="width:${w[i%10]}px"></div>`;return h;}
 
+// ====== SCREENS ======
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-loading').style.display='none';
+  const el=document.getElementById('screen-'+name);
+  if(el) el.classList.add('active');
+  window.scrollTo(0,0);
+  if(name==='overview') renderOverview();
+}
+
+// ====== OVERVIEW ======
 function renderOverview() {
   const count=cards.length;
   document.getElementById('card-count').textContent=`${count} cadeaukaart${count!==1?'en':''}`;
   document.getElementById('btn-add-header').style.display=count>0?'block':'none';
   document.getElementById('stats-row').style.display=count>0?'grid':'none';
   document.getElementById('toolbar').style.display=count>0?'flex':'none';
-  document.getElementById('backup-bar').style.display='flex';
   if(count>0){
     const total=cards.reduce((s,c)=>s+(parseFloat(c.balance)||0),0);
     const es=cards.filter(c=>{const d=daysUntil(c.expiryDate);return d!==null&&d>=0&&d<=30;}).length;
@@ -463,12 +486,13 @@ function renderCards() {
   }).join('');
 }
 
+// ====== DETAIL ======
 function showDetail(id) {
   currentCardId=id; const card=cards.find(c=>c.id===id); if(!card)return;
   const exp=(daysUntil(card.expiryDate)!==null&&daysUntil(card.expiryDate)<0);
   document.getElementById('detail-visual').style.cssText=`background:linear-gradient(135deg,${card.storeColor}dd,${card.storeColor}88);opacity:${exp?0.5:1}`;
   document.getElementById('detail-visual').innerHTML=`
-    <div class="card-visual-top"><span class="card-visual-emoji">${card.storeEmoji}</span><div><div class="card-store">${card.store}</div>${card.nickname?`<div class="card-nickname">${card.nickname}</div>`:''}</div></div>
+    <div class="card-visual-top"><span class="card-visual-emoji">${card.storeEmoji}</span><div><div class="card-store">${card.store}</div>${card.nickname?`<div class="card-nickname" style="font-size:13px;opacity:0.8">${card.nickname}</div>`:''}</div></div>
     ${card.balance?`<div class="card-balance">€ ${parseFloat(card.balance).toFixed(2)}</div>`:''}
     <div class="card-code-display">${showCodes[id]?card.code:card.code.replace(/./g,'•').replace(/•{4}/g,'••••')}</div>
     ${exp?'<div class="expired-overlay">VERLOPEN</div>':''}`;
@@ -488,6 +512,7 @@ function toggleCode(id){showCodes[id]=!showCodes[id];showDetail(id);}
 function togglePin(id){showPins[id]=!showPins[id];showDetail(id);}
 function copyText(text,btnId){navigator.clipboard.writeText(text).then(()=>{const b=document.getElementById(btnId);if(b){b.textContent='✅';b.classList.add('copied');}setTimeout(()=>{const b=document.getElementById(btnId);if(b){b.textContent='📋';b.classList.remove('copied');}},1500);});}
 
+// ====== ADD / EDIT ======
 function showAddScreen(){editMode=false;document.getElementById('add-title').textContent='Nieuwe kaart';document.getElementById('btn-save').textContent='Kaart toevoegen';clearForm();showScreen('add');}
 function startEdit(){const card=cards.find(c=>c.id===currentCardId);if(!card)return;editMode=true;document.getElementById('add-title').textContent='Kaart bewerken';document.getElementById('btn-save').textContent='Opslaan';fillForm(card);showScreen('add');}
 
@@ -501,7 +526,7 @@ function fillForm(card){
   document.getElementById('f-code').value=card.code||'';
   document.getElementById('f-pin').value=card.pin||'';
   document.getElementById('f-balance').value=card.balance||'';
-  const isUnlimited = card.expiryDate==='unlimited';
+  const isUnlimited=card.expiryDate==='unlimited';
   document.getElementById('f-unlimited').checked=isUnlimited;
   document.getElementById('f-expiry').value=isUnlimited?'':(card.expiryDate||'');
   toggleUnlimited();
@@ -513,8 +538,7 @@ function fillForm(card){
 function toggleUnlimited(){
   const cb=document.getElementById('f-unlimited');
   const di=document.getElementById('f-expiry');
-  di.disabled=cb.checked;
-  di.style.opacity=cb.checked?'0.4':'1';
+  di.disabled=cb.checked; di.style.opacity=cb.checked?'0.4':'1';
   if(cb.checked) di.value='';
 }
 
@@ -555,58 +579,20 @@ function saveCard(){
     notes:document.getElementById('f-notes').value,
     createdAt:editMode?(cards.find(c=>c.id===currentCardId)||{}).createdAt:new Date().toISOString(),
   };
-  if(editMode){cards=cards.map(c=>c.id===card.id?card:c);saveCards();showDetail(card.id);}
-  else{cards.push(card);saveCards();showScreen('overview');}
+  if(editMode){cards=cards.map(c=>c.id===card.id?card:c);pushSync();showDetail(card.id);}
+  else{cards.push(card);pushSync();showScreen('overview');}
 }
 
 function deleteCurrentCard(){
   if(!confirm('Weet je zeker dat je deze kaart wilt verwijderen?'))return;
-  cards=cards.filter(c=>c.id!==currentCardId);saveCards();showScreen('overview');
+  cards=cards.filter(c=>c.id!==currentCardId);pushSync();showScreen('overview');
 }
 
-function exportCards() {
-  if(cards.length===0){alert('Geen kaarten om te exporteren.');return;}
-  const data = JSON.stringify({exportDate:new Date().toISOString(),cards}, null, 2);
-  const blob = new Blob([data],{type:'application/json'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href=url;
-  const d=new Date();
-  a.download=`cadeaukaarten-backup-${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}.json`;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-function importCards(event) {
-  const file = event.target.files[0];
-  if(!file)return;
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    try {
-      const data = JSON.parse(e.target.result);
-      const imported = data.cards || (Array.isArray(data) ? data : null);
-      if(!imported) throw new Error('Ongeldig formaat');
-      if(!confirm(`${imported.length} kaarten gevonden. Wil je deze importeren? Je huidige kaarten worden vervangen.`))return;
-      cards = imported;
-      saveCards();
-      showScreen('overview');
-      alert('✅ ' + imported.length + ' kaarten succesvol geïmporteerd!');
-    } catch(err) {
-      alert('❌ Fout bij importeren: ' + err.message);
-    }
-    event.target.value='';
-  };
-  reader.readAsText(file);
-}
-
-window.addEventListener('DOMContentLoaded',()=>{
-  const sel=document.getElementById('f-store');
-  STORES.forEach(s=>sel.innerHTML+=`<option value="${s.name}">${s.emoji} ${s.name}</option>`);
-  initFirebase();
+// ====== INIT ======
+window.addEventListener('DOMContentLoaded', () => {
+  const sel = document.getElementById('f-store');
+  STORES.forEach(s => sel.innerHTML += `<option value="${s.name}">${s.emoji} ${s.name}</option>`);
 });
 </script>
-<!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 </body>
 </html>
